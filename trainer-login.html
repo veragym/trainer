@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>베라짐 트레이너 | 로그인</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, 'Pretendard', 'Apple SD Gothic Neo', sans-serif;
+    background: #0f0f0f;
+    color: #fff;
+    min-height: 100dvh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .wrap {
+    width: 100%;
+    max-width: 400px;
+    padding: 40px 24px;
+  }
+
+  /* 로고 영역 */
+  .logo-area {
+    text-align: center;
+    margin-bottom: 48px;
+  }
+  .logo-area .gym-name {
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    color: #fff;
+  }
+  .logo-area .gym-name span { color: #4ade80; }
+  .logo-area .sub {
+    font-size: 13px;
+    color: #666;
+    margin-top: 6px;
+    letter-spacing: 0.5px;
+  }
+
+  /* 로그인 카드 */
+  .card {
+    background: #1a1a1a;
+    border-radius: 20px;
+    padding: 32px 28px;
+    border: 1px solid #2a2a2a;
+  }
+
+  .card h2 {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 24px;
+    color: #f0f0f0;
+  }
+
+  /* 폼 */
+  .field {
+    margin-bottom: 16px;
+  }
+  .field label {
+    display: block;
+    font-size: 12px;
+    color: #888;
+    margin-bottom: 6px;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+  }
+  .field input {
+    width: 100%;
+    background: #111;
+    border: 1.5px solid #333;
+    border-radius: 10px;
+    padding: 14px 16px;
+    font-size: 15px;
+    color: #fff;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .field input:focus {
+    border-color: #4ade80;
+  }
+  .field input::placeholder { color: #444; }
+
+  /* 에러 메시지 */
+  .err-msg {
+    background: #2d1212;
+    border: 1px solid #5a2020;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    color: #f87171;
+    margin-bottom: 16px;
+    display: none;
+  }
+  .err-msg.show { display: block; }
+
+  /* 로그인 버튼 */
+  .btn-login {
+    width: 100%;
+    background: #4ade80;
+    color: #000;
+    border: none;
+    border-radius: 12px;
+    padding: 16px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 8px;
+    transition: background 0.2s, opacity 0.2s;
+  }
+  .btn-login:hover { background: #22c55e; }
+  .btn-login:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* 로딩 스피너 */
+  .spinner {
+    display: inline-block;
+    width: 16px; height: 16px;
+    border: 2px solid #00000055;
+    border-top-color: #000;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* 하단 안내 */
+  .hint {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 12px;
+    color: #555;
+  }
+
+  /* 버전 태그 */
+  .version {
+    text-align: center;
+    margin-top: 32px;
+    font-size: 11px;
+    color: #333;
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <!-- 로고 -->
+  <div class="logo-area">
+    <div class="gym-name">VERA<span>GYM</span></div>
+    <div class="sub">TRAINER SYSTEM · 미사점</div>
+  </div>
+
+  <!-- 로그인 카드 -->
+  <div class="card">
+    <h2>트레이너 로그인</h2>
+
+    <div id="errMsg" class="err-msg">이메일 또는 비밀번호가 올바르지 않습니다.</div>
+
+    <div class="field">
+      <label>이메일</label>
+      <input type="email" id="inpEmail" placeholder="trainer@veragym.kr" autocomplete="email">
+    </div>
+    <div class="field">
+      <label>비밀번호</label>
+      <input type="password" id="inpPw" placeholder="••••••••" autocomplete="current-password">
+    </div>
+
+    <button class="btn-login" id="btnLogin" onclick="doLogin()">로그인</button>
+
+    <div class="hint">계정이 없으면 원장님께 문의하세요.</div>
+  </div>
+
+  <div class="version">베라짐 트레이너 앱 v0.1</div>
+</div>
+
+<!-- Supabase SDK → config.js 순서 중요! -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script>
+// config.js에서 SUPA_URL, SUPA_ANON, init_db() 불러옴
+init_db(); // db 전역 변수 초기화
+
+// 이미 로그인된 세션이면 대시보드로 이동
+(async () => {
+  const { data: { session } } = await db.auth.getSession();
+  if (session) location.replace('trainer-dash.html');
+})();
+
+// Enter 키 → 로그인
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter') doLogin();
+});
+
+async function doLogin() {
+  const email = document.getElementById('inpEmail').value.trim();
+  const pw    = document.getElementById('inpPw').value;
+  const btn   = document.getElementById('btnLogin');
+  const err   = document.getElementById('errMsg');
+
+  if (!email || !pw) {
+    err.textContent = '이메일과 비밀번호를 모두 입력해주세요.';
+    err.classList.add('show');
+    return;
+  }
+
+  // 로딩
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>로그인 중...';
+  err.classList.remove('show');
+
+  try {
+    const { data, error } = await db.auth.signInWithPassword({ email, password: pw });
+
+    if (error) throw error;
+
+    // trainers 테이블에 등록된 트레이너인지 확인
+    const { data: trainer, error: tErr } = await db
+      .from('trainers')
+      .select('id, name, gym_location, is_active')
+      .eq('auth_id', data.user.id)
+      .single();
+
+    if (tErr || !trainer) {
+      await db.auth.signOut();
+      throw new Error('트레이너 계정이 아닙니다. 원장님께 문의하세요.');
+    }
+
+    if (!trainer.is_active) {
+      await db.auth.signOut();
+      throw new Error('비활성화된 계정입니다. 원장님께 문의하세요.');
+    }
+
+    // 트레이너 정보 로컬 저장
+    localStorage.setItem('vg_trainer', JSON.stringify({
+      id: trainer.id,
+      name: trainer.name,
+      gym_location: trainer.gym_location,
+    }));
+
+    // 대시보드로 이동
+    location.replace('trainer-dash.html');
+
+  } catch (e) {
+    err.textContent = e.message || '로그인 중 오류가 발생했습니다.';
+    err.classList.add('show');
+    btn.disabled = false;
+    btn.innerHTML = '로그인';
+  }
+}
+</script>
+</body>
+</html>

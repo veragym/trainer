@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>베라짐 | 관리자</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, 'Pretendard', 'Apple SD Gothic Neo', sans-serif;
+    background: #0f0f0f; color: #fff; min-height: 100dvh; padding-bottom: 80px;
+  }
+
+  /* ─── 헤더 ─── */
+  .header {
+    background: #1a1a1a; border-bottom: 1px solid #2a2a2a;
+    padding: 16px 20px; display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .header-title { font-size: 16px; font-weight: 800; }
+  .header-title span { color: #4ade80; }
+  .btn-logout { background: none; border: 1px solid #333; border-radius: 8px; color: #888; font-size: 12px; padding: 6px 12px; cursor: pointer; }
+
+  /* ─── 탭 ─── */
+  .tabs { display: flex; background: #1a1a1a; border-bottom: 1px solid #2a2a2a; position: sticky; top: 57px; z-index: 99; }
+  .tab-btn { flex: 1; padding: 14px 0; font-size: 13px; font-weight: 600; color: #666; background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; transition: all 0.2s; }
+  .tab-btn.active { color: #4ade80; border-bottom-color: #4ade80; }
+
+  /* ─── 콘텐츠 ─── */
+  .tab-content { display: none; padding: 20px 16px; }
+  .tab-content.active { display: block; }
+
+  /* ─── 섹션 헤더 ─── */
+  .sec-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .sec-title { font-size: 15px; font-weight: 700; }
+  .sec-count { font-size: 13px; color: #555; margin-left: 6px; }
+  .btn-add { background: #4ade80; color: #000; border: none; border-radius: 10px; padding: 8px 16px; font-size: 13px; font-weight: 700; cursor: pointer; }
+  .btn-add:hover { background: #22c55e; }
+
+  /* ─── 트레이너 카드 ─── */
+  .trainer-card {
+    background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 14px;
+    padding: 14px 16px; margin-bottom: 10px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .trainer-avatar {
+    width: 42px; height: 42px; border-radius: 50%; background: #2a2a2a;
+    display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0;
+  }
+  .trainer-info { flex: 1; }
+  .trainer-name { font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+  .badge-admin { background: #4ade8022; border: 1px solid #4ade8055; color: #4ade80; font-size: 10px; padding: 2px 7px; border-radius: 20px; font-weight: 600; }
+  .badge-inactive { background: #33000088; border: 1px solid #550000; color: #f87171; font-size: 10px; padding: 2px 7px; border-radius: 20px; }
+  .trainer-email { font-size: 12px; color: #555; margin-top: 3px; }
+  .trainer-actions { display: flex; gap: 6px; }
+  .btn-sm {
+    background: #222; border: 1px solid #333; border-radius: 8px;
+    padding: 6px 12px; font-size: 12px; color: #aaa; cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-sm:hover { border-color: #555; color: #fff; }
+  .btn-sm.danger:hover { border-color: #f87171; color: #f87171; }
+
+  /* ─── 모달 공통 ─── */
+  .modal-bg { display: none; position: fixed; inset: 0; background: #000000cc; z-index: 200; align-items: flex-end; justify-content: center; }
+  .modal-bg.open { display: flex; }
+  .modal { background: #1a1a1a; border-radius: 24px 24px 0 0; width: 100%; max-width: 480px; padding: 0 24px 40px; max-height: 90dvh; overflow-y: auto; animation: slideUp 0.22s ease; }
+  @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  .modal-handle { width: 36px; height: 4px; background: #333; border-radius: 99px; margin: 16px auto 20px; }
+  .modal-title { font-size: 17px; font-weight: 700; margin-bottom: 20px; }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 12px; color: #888; margin-bottom: 6px; font-weight: 500; }
+  .field input, .field select {
+    width: 100%; background: #111; border: 1.5px solid #333; border-radius: 10px;
+    padding: 12px 14px; font-size: 14px; color: #fff; outline: none; font-family: inherit;
+    transition: border-color 0.2s;
+  }
+  .field input:focus, .field select:focus { border-color: #4ade80; }
+  .field input::placeholder { color: #444; }
+  .field select option { background: #1a1a1a; }
+  .field .hint { font-size: 11px; color: #555; margin-top: 5px; }
+  .modal-btns { display: flex; gap: 10px; margin-top: 20px; }
+  .btn-cancel { flex: 1; background: #2a2a2a; border: none; border-radius: 12px; padding: 14px; font-size: 15px; color: #aaa; cursor: pointer; font-weight: 600; }
+  .btn-save { flex: 2; background: #4ade80; border: none; border-radius: 12px; padding: 14px; font-size: 15px; color: #000; font-weight: 700; cursor: pointer; }
+  .btn-save:disabled { opacity: 0.4; }
+
+  /* 에러 화면 */
+  .access-denied { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100dvh; text-align: center; padding: 40px; }
+  .access-denied .icon { font-size: 60px; margin-bottom: 20px; }
+  .access-denied h2 { font-size: 20px; font-weight: 700; margin-bottom: 10px; }
+  .access-denied p { font-size: 14px; color: #666; }
+
+  .loading { text-align: center; padding: 40px; color: #555; }
+  .empty { text-align: center; padding: 40px; color: #444; font-size: 14px; }
+
+  /* 토스트 */
+  .toast { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); background: #333; color: #fff; border-radius: 10px; padding: 10px 18px; font-size: 13px; font-weight: 600; opacity: 0; pointer-events: none; transition: opacity 0.3s; z-index: 999; white-space: nowrap; }
+</style>
+</head>
+<body>
+
+<!-- 접근 거부 화면 (권한 없을 때) -->
+<div id="accessDenied" class="access-denied" style="display:none">
+  <div class="icon">🔒</div>
+  <h2>접근 권한이 없어요</h2>
+  <p>관리자(원장님) 계정만 접근 가능합니다.<br>트레이너 대시보드로 돌아가세요.</p>
+  <button onclick="location.replace('trainer-dash.html')" style="margin-top:20px;background:#4ade80;color:#000;border:none;border-radius:12px;padding:12px 24px;font-size:14px;font-weight:700;cursor:pointer">대시보드로 이동</button>
+</div>
+
+<!-- 메인 (관리자만) -->
+<div id="mainWrap" style="display:none">
+  <div class="header">
+    <div class="header-title">VERA<span>GYM</span> 관리자</div>
+    <button class="btn-logout" onclick="doLogout()">로그아웃</button>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('trainers',this)">트레이너 관리</button>
+    <button class="tab-btn" onclick="switchTab('members',this)">전체 회원</button>
+    <button class="tab-btn" onclick="switchTab('refs',this)">운동 레퍼런스</button>
+  </div>
+
+  <!-- ① 트레이너 관리 -->
+  <div id="tab-trainers" class="tab-content active">
+    <div class="sec-header">
+      <div>
+        <span class="sec-title">트레이너</span>
+        <span class="sec-count" id="trainerCount"></span>
+      </div>
+      <button class="btn-add" onclick="openAddTrainer()">+ 트레이너 추가</button>
+    </div>
+    <div id="trainerList"><div class="loading">불러오는 중...</div></div>
+  </div>
+
+  <!-- ② 전체 회원 -->
+  <div id="tab-members" class="tab-content">
+    <div class="sec-header">
+      <div>
+        <span class="sec-title">전체 회원</span>
+        <span class="sec-count" id="memberCount"></span>
+      </div>
+    </div>
+    <div id="memberList"><div class="loading">불러오는 중...</div></div>
+  </div>
+
+  <!-- ③ 운동 레퍼런스 -->
+  <div id="tab-refs" class="tab-content">
+    <div class="sec-header">
+      <span class="sec-title">운동 레퍼런스</span>
+      <span class="sec-count" id="refCount"></span>
+    </div>
+    <p style="font-size:12px;color:#555;margin-bottom:14px">엑셀 임포트 데이터 — 회원 볼거리용 참고 자료입니다.</p>
+    <div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:12px;padding:16px;margin-bottom:16px">
+      <div style="font-size:13px;font-weight:600;margin-bottom:6px">📥 엑셀 임포트 방법</div>
+      <div style="font-size:12px;color:#666;line-height:1.7">
+        1. <code style="background:#111;padding:2px 6px;border-radius:4px">import-exercises.py</code> 파일 열기<br>
+        2. SUPABASE_URL, SUPABASE_SERVICE_KEY 입력<br>
+        3. <code style="background:#111;padding:2px 6px;border-radius:4px">python import-exercises.py</code> 실행
+      </div>
+    </div>
+    <div id="refList"><div class="loading">불러오는 중...</div></div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<!-- ─── 트레이너 추가 모달 ─── -->
+<div id="addTrainerModal" class="modal-bg" onclick="closeModal('addTrainerModal',event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">트레이너 추가</div>
+    <div class="field">
+      <label>이름 <span style="color:#f87171">*</span></label>
+      <input id="tName" type="text" placeholder="홍길동">
+    </div>
+    <div class="field">
+      <label>이메일 <span style="color:#f87171">*</span></label>
+      <input id="tEmail" type="email" placeholder="trainer@veragym.kr">
+    </div>
+    <div class="field">
+      <label>임시 비밀번호 <span style="color:#f87171">*</span></label>
+      <input id="tPw" type="password" placeholder="첫 로그인 후 변경 권장">
+      <div class="hint">트레이너에게 전달 후 변경하도록 안내해주세요</div>
+    </div>
+    <div class="field">
+      <label>지점</label>
+      <select id="tGym">
+        <option value="미사점">미사점</option>
+        <option value="동탄점">동탄점</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>권한</label>
+      <select id="tRole">
+        <option value="false">트레이너</option>
+        <option value="true">관리자 (원장님)</option>
+      </select>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal('addTrainerModal')">취소</button>
+      <button class="btn-save" id="btnAddTrainer" onclick="addTrainer()">추가</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script>
+init_db();
+
+let adminTrainer = null;
+
+// ─── 초기화 ───
+async function init() {
+  const t = await requireTrainer();
+  if (!t) return;
+
+  // 관리자 권한 체크 (DB에서 직접 확인)
+  const { data, error } = await db
+    .from('trainers')
+    .select('is_admin')
+    .eq('id', t.id)
+    .single();
+
+  if (error || !data?.is_admin) {
+    document.getElementById('accessDenied').style.display = 'flex';
+    return;
+  }
+
+  adminTrainer = t;
+  document.getElementById('mainWrap').style.display = 'block';
+  loadTrainers();
+}
+
+// ─── 트레이너 목록 ───
+async function loadTrainers() {
+  const { data, error } = await db
+    .from('trainers')
+    .select('*')
+    .order('created_at');
+
+  if (error) { showToast('불러오기 실패'); return; }
+
+  document.getElementById('trainerCount').textContent = `(${data.length}명)`;
+  const wrap = document.getElementById('trainerList');
+
+  if (!data.length) {
+    wrap.innerHTML = '<div class="empty">등록된 트레이너가 없어요</div>';
+    return;
+  }
+
+  wrap.innerHTML = data.map(t => `
+    <div class="trainer-card">
+      <div class="trainer-avatar">${t.is_admin ? '👑' : '🏋️'}</div>
+      <div class="trainer-info">
+        <div class="trainer-name">
+          ${t.name}
+          ${t.is_admin ? '<span class="badge-admin">관리자</span>' : ''}
+          ${!t.is_active ? '<span class="badge-inactive">비활성</span>' : ''}
+        </div>
+        <div class="trainer-email">${t.email} · ${t.gym_location}</div>
+      </div>
+      <div class="trainer-actions">
+        <button class="btn-sm ${t.is_active ? 'danger' : ''}"
+          onclick="toggleActive('${t.id}','${t.name}',${t.is_active})">
+          ${t.is_active ? '비활성화' : '활성화'}
+        </button>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ─── 트레이너 추가 ───
+function openAddTrainer() {
+  document.getElementById('tName').value  = '';
+  document.getElementById('tEmail').value = '';
+  document.getElementById('tPw').value    = '';
+  openModal('addTrainerModal');
+}
+
+async function addTrainer() {
+  const name    = document.getElementById('tName').value.trim();
+  const email   = document.getElementById('tEmail').value.trim();
+  const pw      = document.getElementById('tPw').value;
+  const gym     = document.getElementById('tGym').value;
+  const isAdmin = document.getElementById('tRole').value === 'true';
+
+  if (!name || !email || !pw) { showToast('이름, 이메일, 비밀번호를 입력해주세요'); return; }
+  if (pw.length < 6) { showToast('비밀번호는 6자 이상이어야 합니다'); return; }
+
+  const btn = document.getElementById('btnAddTrainer');
+  btn.disabled = true; btn.textContent = '추가 중...';
+
+  try {
+    // 1. Supabase Auth 계정 생성
+    const { data: authData, error: authErr } = await db.auth.signUp({ email, password: pw });
+    if (authErr) throw authErr;
+
+    // 2. trainers 테이블에 등록
+    const { error: tErr } = await db.from('trainers').insert({
+      auth_id:      authData.user.id,
+      name, email,
+      gym_location: gym,
+      is_admin:     isAdmin,
+    });
+    if (tErr) throw tErr;
+
+    closeModal('addTrainerModal');
+    showToast(`${name} 트레이너 추가 완료!`);
+    loadTrainers();
+  } catch(e) {
+    showToast('오류: ' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = '추가';
+  }
+}
+
+// ─── 트레이너 활성/비활성 토글 ───
+async function toggleActive(id, name, isActive) {
+  const action = isActive ? '비활성화' : '활성화';
+  if (!confirm(`${name} 트레이너를 ${action}할까요?`)) return;
+  const { error } = await db.from('trainers').update({ is_active: !isActive }).eq('id', id);
+  if (error) { showToast('변경 실패: ' + error.message); return; }
+  showToast(`${name} 트레이너 ${action} 완료`);
+  loadTrainers();
+}
+
+// ─── 전체 회원 ───
+async function loadMembers() {
+  const { data, error } = await db
+    .from('members')
+    .select('*, trainers(name)')
+    .eq('is_active', true)
+    .order('name');
+
+  if (error) { showToast('불러오기 실패'); return; }
+  document.getElementById('memberCount').textContent = `(${data.length}명)`;
+  const wrap = document.getElementById('memberList');
+  if (!data.length) { wrap.innerHTML = '<div class="empty">등록된 회원이 없어요</div>'; return; }
+  wrap.innerHTML = data.map(m => `
+    <div class="trainer-card">
+      <div class="trainer-avatar">🏃</div>
+      <div class="trainer-info">
+        <div class="trainer-name">${m.name}</div>
+        <div class="trainer-email">담당: ${m.trainers?.name || '미배정'} · ${m.gym_location}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ─── 운동 레퍼런스 ───
+async function loadRefs() {
+  const { data, count, error } = await db
+    .from('exercise_refs')
+    .select('*', { count: 'exact' })
+    .order('name_ko')
+    .limit(50);
+
+  document.getElementById('refCount').textContent = count ? `(총 ${count}개)` : '';
+  const wrap = document.getElementById('refList');
+  if (!data?.length) {
+    wrap.innerHTML = '<div class="empty">데이터 없음. import-exercises.py를 실행해주세요.</div>';
+    return;
+  }
+  wrap.innerHTML = data.map(r => `
+    <div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:10px;padding:12px 14px;margin-bottom:8px">
+      <div style="font-size:14px;font-weight:600">${r.name_ko}</div>
+      <div style="font-size:11px;color:#555;margin-top:3px">${r.name_en || ''} · ${r.category || ''}</div>
+    </div>
+  `).join('') + `<div style="text-align:center;color:#444;font-size:12px;padding:12px">최대 50개만 표시됩니다</div>`;
+}
+
+// ─── 탭 전환 ───
+function switchTab(id, btn) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(`tab-${id}`).classList.add('active');
+  btn.classList.add('active');
+  if (id === 'members') loadMembers();
+  if (id === 'refs')    loadRefs();
+}
+
+// ─── 로그아웃 ───
+async function doLogout() {
+  await db.auth.signOut();
+  localStorage.removeItem('vg_trainer');
+  location.replace('trainer-login.html');
+}
+
+// ─── 모달 ───
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id, e) {
+  if (e && e.target !== document.getElementById(id)) return;
+  document.getElementById(id).classList.remove('open');
+}
+
+init();
+</script>
+</body>
+</html>

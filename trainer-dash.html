@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>베라짐 트레이너 | 대시보드</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, 'Pretendard', 'Apple SD Gothic Neo', sans-serif;
+    background: #0f0f0f;
+    color: #fff;
+    min-height: 100dvh;
+    padding-bottom: 80px;
+  }
+
+  /* ─── 헤더 ─── */
+  .header {
+    background: #1a1a1a;
+    border-bottom: 1px solid #2a2a2a;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .header .gym { font-size: 15px; font-weight: 700; color: #4ade80; }
+  .header .trainer-name { font-size: 13px; color: #aaa; }
+  .btn-logout {
+    background: none; border: 1px solid #333; border-radius: 8px;
+    color: #888; font-size: 12px; padding: 6px 12px; cursor: pointer;
+  }
+  .btn-logout:hover { border-color: #555; color: #ccc; }
+
+  /* ─── 탭 ─── */
+  .tabs {
+    display: flex;
+    border-bottom: 1px solid #2a2a2a;
+    background: #1a1a1a;
+    position: sticky; top: 56px; z-index: 99;
+  }
+  .tab-btn {
+    flex: 1; padding: 14px 0;
+    font-size: 13px; font-weight: 600;
+    color: #666; background: none; border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .tab-btn.active { color: #4ade80; border-bottom-color: #4ade80; }
+
+  /* ─── 콘텐츠 영역 ─── */
+  .tab-content { display: none; padding: 20px; }
+  .tab-content.active { display: block; }
+
+  /* ─── 섹션 헤더 ─── */
+  .sec-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .sec-title { font-size: 16px; font-weight: 700; }
+  .btn-add {
+    background: #4ade80; color: #000;
+    border: none; border-radius: 10px;
+    padding: 8px 16px; font-size: 13px; font-weight: 700;
+    cursor: pointer;
+  }
+  .btn-add:hover { background: #22c55e; }
+
+  /* ─── 회원 카드 리스트 ─── */
+  .member-list { display: flex; flex-direction: column; gap: 10px; }
+  .member-card {
+    background: #1a1a1a; border: 1px solid #2a2a2a;
+    border-radius: 14px; padding: 16px 18px;
+    cursor: pointer; transition: border-color 0.2s;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .member-card:hover { border-color: #3a3a3a; }
+  .member-avatar {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: #2a2a2a; display: flex; align-items: center;
+    justify-content: center; font-size: 18px; flex-shrink: 0;
+  }
+  .member-info { flex: 1; min-width: 0; }
+  .member-name { font-size: 15px; font-weight: 700; }
+  .member-meta { font-size: 12px; color: #666; margin-top: 3px; }
+  .member-badge {
+    font-size: 11px; color: #4ade80;
+    background: #0f2a1a; border-radius: 6px;
+    padding: 3px 8px; flex-shrink: 0;
+  }
+  .chevron { color: #444; font-size: 16px; }
+
+  /* ─── 오늘의 수업 카드 ─── */
+  .today-list { display: flex; flex-direction: column; gap: 10px; }
+  .session-card {
+    background: #1a1a1a; border: 1px solid #2a2a2a;
+    border-radius: 14px; padding: 16px 18px;
+    cursor: pointer; transition: border-color 0.2s;
+  }
+  .session-card:hover { border-color: #3a3a3a; }
+  .sess-top { display: flex; justify-content: space-between; align-items: center; }
+  .sess-member { font-size: 15px; font-weight: 700; }
+  .sess-num { font-size: 12px; color: #4ade80; background: #0f2a1a; padding: 3px 8px; border-radius: 6px; }
+  .sess-bottom { margin-top: 8px; font-size: 12px; color: #666; display: flex; gap: 12px; }
+  .sess-ex-count { color: #aaa; }
+
+  /* ─── 빈 상태 ─── */
+  .empty {
+    text-align: center; padding: 48px 20px;
+    color: #444; font-size: 14px;
+  }
+  .empty-icon { font-size: 40px; margin-bottom: 12px; }
+
+  /* ─── 로딩 ─── */
+  .loading {
+    text-align: center; padding: 40px;
+    color: #555; font-size: 14px;
+  }
+
+  /* ─── 모달 공통 ─── */
+  .modal-bg {
+    display: none; position: fixed; inset: 0;
+    background: #000000cc; z-index: 200;
+    align-items: flex-end; justify-content: center;
+  }
+  .modal-bg.open { display: flex; }
+  .modal {
+    background: #1a1a1a; border-radius: 24px 24px 0 0;
+    width: 100%; max-width: 480px;
+    padding: 24px 24px 40px;
+    max-height: 90dvh; overflow-y: auto;
+    animation: slideUp 0.25s ease;
+  }
+  @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  .modal-handle {
+    width: 36px; height: 4px; background: #333;
+    border-radius: 99px; margin: 0 auto 20px;
+  }
+  .modal-title { font-size: 17px; font-weight: 700; margin-bottom: 20px; }
+  .modal-field { margin-bottom: 14px; }
+  .modal-field label { display: block; font-size: 12px; color: #888; margin-bottom: 6px; }
+  .modal-field input, .modal-field select, .modal-field textarea {
+    width: 100%; background: #111; border: 1.5px solid #333;
+    border-radius: 10px; padding: 12px 14px;
+    font-size: 14px; color: #fff; outline: none;
+    font-family: inherit;
+    transition: border-color 0.2s;
+  }
+  .modal-field input:focus, .modal-field select:focus, .modal-field textarea:focus {
+    border-color: #4ade80;
+  }
+  .modal-field textarea { resize: vertical; min-height: 80px; }
+  .modal-field select option { background: #1a1a1a; }
+
+  .modal-btns { display: flex; gap: 10px; margin-top: 20px; }
+  .btn-cancel {
+    flex: 1; background: #2a2a2a; border: none;
+    border-radius: 12px; padding: 14px; font-size: 15px;
+    color: #aaa; cursor: pointer; font-weight: 600;
+  }
+  .btn-save {
+    flex: 2; background: #4ade80; border: none;
+    border-radius: 12px; padding: 14px; font-size: 15px;
+    color: #000; font-weight: 700; cursor: pointer;
+  }
+  .btn-save:hover { background: #22c55e; }
+
+  /* 토큰 복사 영역 */
+  .token-box {
+    background: #111; border: 1px solid #2a2a2a;
+    border-radius: 10px; padding: 12px 14px;
+    display: flex; align-items: center; gap: 10px;
+    margin-top: 8px;
+  }
+  .token-val { flex: 1; font-size: 13px; color: #4ade80; word-break: break-all; font-family: monospace; }
+  .btn-copy {
+    background: #2a2a2a; border: none; border-radius: 8px;
+    padding: 6px 12px; color: #aaa; font-size: 12px;
+    cursor: pointer; flex-shrink: 0;
+  }
+  .btn-copy:hover { background: #333; color: #fff; }
+
+  /* 토스트 */
+  .toast {
+    position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
+    background: #333; color: #fff; border-radius: 10px;
+    padding: 10px 18px; font-size: 13px; font-weight: 600;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.3s;
+    z-index: 999; white-space: nowrap;
+  }
+  .toast.show { opacity: 1; }
+
+  /* ─── 바텀 네비 ─── */
+  .bottom-nav {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: #1a1a1a; border-top: 1px solid #2a2a2a;
+    display: flex; z-index: 100;
+  }
+  .nav-btn {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; padding: 12px 0;
+    font-size: 10px; color: #555;
+    border: none; background: none; cursor: pointer;
+    gap: 4px;
+  }
+  .nav-btn .icon { font-size: 22px; }
+  .nav-btn.active { color: #4ade80; }
+</style>
+</head>
+<body>
+
+<!-- 헤더 -->
+<div class="header">
+  <div>
+    <div class="gym" id="hdrGym">베라짐 미사점</div>
+    <div class="trainer-name" id="hdrTrainer">트레이너</div>
+  </div>
+  <button class="btn-logout" onclick="doLogout()">로그아웃</button>
+</div>
+
+<!-- 탭 -->
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('today',this)">오늘 수업</button>
+  <button class="tab-btn" onclick="switchTab('members',this)">내 회원</button>
+  <button class="tab-btn" onclick="switchTab('history',this)">수업 기록</button>
+</div>
+
+<!-- ① 오늘 수업 탭 -->
+<div id="tab-today" class="tab-content active">
+  <div class="sec-header">
+    <span class="sec-title" id="todayLabel">오늘 수업</span>
+    <button class="btn-add" onclick="openNewSessionModal()">+ 수업 추가</button>
+  </div>
+  <div id="todayList" class="today-list">
+    <div class="loading">불러오는 중...</div>
+  </div>
+</div>
+
+<!-- ② 내 회원 탭 -->
+<div id="tab-members" class="tab-content">
+  <div class="sec-header">
+    <span class="sec-title">내 회원 <span id="memberCount" style="color:#666;font-size:13px;font-weight:400"></span></span>
+    <button class="btn-add" onclick="openAddMemberModal()">+ 회원 추가</button>
+  </div>
+  <div id="memberList" class="member-list">
+    <div class="loading">불러오는 중...</div>
+  </div>
+</div>
+
+<!-- ③ 수업 기록 탭 -->
+<div id="tab-history" class="tab-content">
+  <div class="sec-header">
+    <span class="sec-title">수업 기록</span>
+  </div>
+  <div id="historyList" class="today-list">
+    <div class="loading">불러오는 중...</div>
+  </div>
+</div>
+
+<!-- ─── 회원 추가 모달 ─── -->
+<div id="addMemberModal" class="modal-bg" onclick="closeModal('addMemberModal',event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">회원 추가</div>
+    <div class="modal-field">
+      <label>이름</label>
+      <input id="mName" type="text" placeholder="홍길동">
+    </div>
+    <div class="modal-field">
+      <label>연락처 (선택)</label>
+      <input id="mPhone" type="tel" placeholder="010-0000-0000">
+    </div>
+    <div class="modal-field">
+      <label>메모 (선택)</label>
+      <textarea id="mMemo" placeholder="부상 이력, 특이사항 등"></textarea>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal('addMemberModal')">취소</button>
+      <button class="btn-save" onclick="saveMember()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── 회원 상세 모달 ─── -->
+<div id="memberDetailModal" class="modal-bg" onclick="closeModal('memberDetailModal',event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="detailName">회원 상세</div>
+
+    <div style="margin-bottom:16px">
+      <div style="font-size:12px;color:#888;margin-bottom:6px">회원 조회 링크 (공유용)</div>
+      <div class="token-box">
+        <span class="token-val" id="detailToken">-</span>
+        <button class="btn-copy" onclick="copyToken()">복사</button>
+      </div>
+      <div style="font-size:11px;color:#555;margin-top:6px">이 링크를 회원에게 공유하면 수업 일지를 열람할 수 있어요.</div>
+    </div>
+
+    <div style="font-size:13px;color:#888;margin-bottom:8px" id="detailMemo"></div>
+
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="goMemberSessions()">수업 기록 보기</button>
+      <button class="btn-save" onclick="startNewSession()">수업 시작</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── 새 수업 모달 ─── -->
+<div id="newSessionModal" class="modal-bg" onclick="closeModal('newSessionModal',event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">수업 추가</div>
+    <div class="modal-field">
+      <label>회원 선택</label>
+      <select id="nssMember">
+        <option value="">-- 회원 선택 --</option>
+      </select>
+    </div>
+    <div class="modal-field">
+      <label>날짜</label>
+      <input type="date" id="nssDate">
+    </div>
+    <div class="modal-field">
+      <label>회차</label>
+      <input type="number" id="nssNum" placeholder="예: 5" min="1">
+    </div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal('newSessionModal')">취소</button>
+      <button class="btn-save" onclick="createSession()">운동 기록 작성 →</button>
+    </div>
+  </div>
+</div>
+
+<!-- 토스트 -->
+<div id="toast" class="toast"></div>
+
+<!-- Supabase SDK → config.js 순서 중요! -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script>
+init_db(); // db 전역 변수 초기화
+
+let trainer = null;       // 로그인한 트레이너 정보
+let members = [];         // 내 회원 목록
+let selectedMember = null; // 상세 모달에서 선택된 회원
+
+// ─── 초기화 ───
+async function init() {
+  // 로그인 체크 (config.js의 requireTrainer 사용)
+  trainer = await requireTrainer();
+  if (!trainer) return;
+
+  // 헤더 세팅
+  document.getElementById('hdrGym').textContent = `베라짐 ${trainer.gym_location}`;
+  document.getElementById('hdrTrainer').textContent = `${trainer.name} 트레이너`;
+
+  // 오늘 날짜 세팅
+  const today = new Date().toLocaleDateString('ko-KR',{month:'long',day:'numeric',weekday:'short'});
+  document.getElementById('todayLabel').textContent = `오늘 수업 · ${today}`;
+  document.getElementById('nssDate').value = new Date().toISOString().slice(0,10);
+
+  // 데이터 로드
+  await Promise.all([loadMembers(), loadTodaySessions()]);
+}
+
+// ─── 회원 목록 ───
+async function loadMembers() {
+  const { data, error } = await db
+    .from('members')
+    .select('*')
+    .eq('trainer_id', trainer.id)
+    .eq('is_active', true)
+    .order('name');
+
+  if (error) { console.error(error); return; }
+  members = data || [];
+
+  // 카운트
+  document.getElementById('memberCount').textContent = `(${members.length}명)`;
+
+  // 셀렉트 박스 채우기
+  const sel = document.getElementById('nssMember');
+  sel.innerHTML = '<option value="">-- 회원 선택 --</option>' +
+    members.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+
+  // 회원 리스트 렌더
+  const wrap = document.getElementById('memberList');
+  if (!members.length) {
+    wrap.innerHTML = `<div class="empty"><div class="empty-icon">👥</div>등록된 회원이 없어요.<br>+ 버튼으로 추가해보세요.</div>`;
+    return;
+  }
+  wrap.innerHTML = members.map(m => `
+    <div class="member-card" onclick="openMemberDetail('${m.id}')">
+      <div class="member-avatar">🏋️</div>
+      <div class="member-info">
+        <div class="member-name">${m.name}</div>
+        <div class="member-meta">${m.phone || '연락처 없음'}</div>
+      </div>
+      <div class="member-badge">일지 보기</div>
+      <div class="chevron">›</div>
+    </div>
+  `).join('');
+}
+
+// ─── 오늘 수업 ───
+async function loadTodaySessions() {
+  const today = new Date().toISOString().slice(0,10);
+  const { data, error } = await db
+    .from('pt_sessions')
+    .select(`
+      *,
+      members(name),
+      session_exs(id)
+    `)
+    .eq('trainer_id', trainer.id)
+    .eq('session_date', today)
+    .order('created_at', { ascending: false });
+
+  if (error) { console.error(error); return; }
+  renderSessionList('todayList', data || []);
+}
+
+// ─── 수업 기록 (최근 30개) ───
+async function loadHistory() {
+  const { data, error } = await db
+    .from('pt_sessions')
+    .select(`*, members(name), session_exs(id)`)
+    .eq('trainer_id', trainer.id)
+    .order('session_date', { ascending: false })
+    .limit(30);
+
+  if (error) { console.error(error); return; }
+  renderSessionList('historyList', data || []);
+}
+
+function renderSessionList(containerId, sessions) {
+  const wrap = document.getElementById(containerId);
+  if (!sessions.length) {
+    wrap.innerHTML = `<div class="empty"><div class="empty-icon">📋</div>수업 기록이 없어요.</div>`;
+    return;
+  }
+  wrap.innerHTML = sessions.map(s => {
+    const exCount = s.session_exs ? s.session_exs.length : 0;
+    const dateStr = s.session_date ? new Date(s.session_date).toLocaleDateString('ko-KR',{month:'short',day:'numeric'}) : '';
+    return `
+      <div class="session-card" onclick="goWriteSession('${s.id}')">
+        <div class="sess-top">
+          <span class="sess-member">${s.members?.name || '회원'}</span>
+          <span class="sess-num">${s.session_number ? s.session_number+'회차' : '-'}</span>
+        </div>
+        <div class="sess-bottom">
+          <span>${dateStr}</span>
+          <span class="sess-ex-count">운동 ${exCount}종목</span>
+          ${s.notes ? `<span style="color:#666">💬 메모있음</span>` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ─── 회원 상세 모달 ───
+function openMemberDetail(memberId) {
+  selectedMember = members.find(m => m.id === memberId);
+  if (!selectedMember) return;
+
+  document.getElementById('detailName').textContent = `${selectedMember.name} 회원`;
+  const base = location.origin + location.pathname.replace('trainer-dash.html','');
+  document.getElementById('detailToken').textContent = `${base}member-view.html?token=${selectedMember.token}`;
+  document.getElementById('detailMemo').textContent = selectedMember.memo || '';
+
+  openModal('memberDetailModal');
+}
+
+function goMemberSessions() {
+  if (!selectedMember) return;
+  location.href = `session-write.html?member=${selectedMember.id}`;
+}
+
+function startNewSession() {
+  if (!selectedMember) return;
+  document.getElementById('nssMember').value = selectedMember.id;
+  closeModal('memberDetailModal');
+  openModal('newSessionModal');
+}
+
+// ─── 새 수업 추가 모달 ───
+function openNewSessionModal() {
+  if (!members.length) { showToast('먼저 회원을 추가해주세요'); return; }
+  openModal('newSessionModal');
+}
+
+// ─── 회원 추가 ───
+function openAddMemberModal() { openModal('addMemberModal'); }
+
+async function saveMember() {
+  const name  = document.getElementById('mName').value.trim();
+  const phone = document.getElementById('mPhone').value.trim();
+  const memo  = document.getElementById('mMemo').value.trim();
+
+  if (!name) { showToast('이름을 입력해주세요'); return; }
+
+  const { error } = await db.from('members').insert({
+    name, phone: phone || null, memo: memo || null,
+    trainer_id: trainer.id,
+    gym_location: trainer.gym_location,
+  });
+
+  if (error) { showToast('저장 실패: ' + error.message); return; }
+  closeModal('addMemberModal');
+  showToast(`${name} 회원 추가 완료!`);
+  document.getElementById('mName').value = '';
+  document.getElementById('mPhone').value = '';
+  document.getElementById('mMemo').value = '';
+  await loadMembers();
+}
+
+// ─── 새 세션 생성 → session-write.html 이동 ───
+async function createSession() {
+  const memberId = document.getElementById('nssMember').value;
+  const date     = document.getElementById('nssDate').value;
+  const num      = document.getElementById('nssNum').value;
+
+  if (!memberId) { showToast('회원을 선택해주세요'); return; }
+  if (!date)     { showToast('날짜를 선택해주세요'); return; }
+
+  const { data, error } = await db.from('pt_sessions').insert({
+    member_id: memberId,
+    trainer_id: trainer.id,
+    session_date: date,
+    session_number: num ? parseInt(num) : null,
+    gym_location: trainer.gym_location,
+  }).select().single();
+
+  if (error) { showToast('생성 실패: ' + error.message); return; }
+  closeModal('newSessionModal');
+  location.href = `session-write.html?session=${data.id}`;
+}
+
+function goWriteSession(sessionId) {
+  location.href = `session-write.html?session=${sessionId}`;
+}
+
+// ─── 로그아웃 ───
+async function doLogout() {
+  await db.auth.signOut();
+  localStorage.removeItem('vg_trainer');
+  location.replace('trainer-login.html');
+}
+
+// ─── 탭 전환 ───
+function switchTab(tabId, btn) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(`tab-${tabId}`).classList.add('active');
+  btn.classList.add('active');
+  if (tabId === 'history') loadHistory();
+}
+
+// ─── 모달 ───
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id, e) {
+  if (e && e.target !== document.getElementById(id)) return;
+  document.getElementById(id).classList.remove('open');
+}
+
+// ─── 토큰 복사 ───
+function copyToken() {
+  const val = document.getElementById('detailToken').textContent;
+  navigator.clipboard.writeText(val).then(() => showToast('링크 복사됨!'));
+}
+
+// showToast → config.js의 전역 함수 사용
+
+// ─── 시작 ───
+init();
+</script>
+</body>
+</html>
