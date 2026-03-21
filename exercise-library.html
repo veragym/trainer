@@ -128,6 +128,18 @@
   }
   .btn-use.using:hover { border-color: #f87171; color: #f87171; background: #2a1515; }
 
+  /* 즐겨찾기 버튼 */
+  .btn-fav {
+    background: none; border: none;
+    font-size: 22px; cursor: pointer;
+    padding: 4px 6px; flex-shrink: 0;
+    transition: transform 0.15s;
+    opacity: 0.35;
+    line-height: 1;
+  }
+  .btn-fav.active { opacity: 1; }
+  .btn-fav:active { transform: scale(1.35); }
+
   /* 로딩 / 빈 상태 */
   .empty {
     text-align: center; padding: 60px 20px; color: #444;
@@ -333,9 +345,10 @@ init_db();
 
 // ─── 상태 ───
 let trainer   = null;
-let allExs    = [];     // exercise_refs 전체
-let myLibIds  = new Set(); // exercises_lib의 ref_id 목록
-let curView   = 'all';  // 'all' | 'mine'
+let allExs    = [];          // exercise_refs 전체
+let myLibIds  = new Set();   // exercises_lib의 ref_id 목록
+let favIds    = new Set();   // 즐겨찾기된 ref_id 목록
+let curView   = 'all';       // 'all' | 'mine'
 let filterBody = '';
 let searchTm  = null;
 
@@ -364,10 +377,11 @@ async function loadAllExercises() {
 async function loadMyLib() {
   const { data } = await db
     .from('exercises_lib')
-    .select('ref_id')
+    .select('ref_id, is_favorite')
     .eq('trainer_id', trainer.id)
     .not('ref_id', 'is', null);
   myLibIds = new Set((data || []).map(r => r.ref_id));
+  favIds   = new Set((data || []).filter(r => r.is_favorite).map(r => r.ref_id));
   document.getElementById('myCount').textContent = `내 목록 ${myLibIds.size}`;
 }
 
@@ -427,11 +441,15 @@ function renderList() {
     (e.name_ko||'').toLowerCase().includes(q)
   );
 
-  // 내 목록이 먼저 오도록 정렬
+  // 정렬: 즐겨찾기 → 내 목록 → 나머지
   list = [...list].sort((a, b) => {
-    const aM = myLibIds.has(a.id) ? 0 : 1;
-    const bM = myLibIds.has(b.id) ? 0 : 1;
-    return aM - bM;
+    const aFav = favIds.has(a.id)   ? 0 : 1;
+    const bFav = favIds.has(b.id)   ? 0 : 1;
+    const aM   = myLibIds.has(a.id) ? 0 : 1;
+    const bM   = myLibIds.has(b.id) ? 0 : 1;
+    if (aM   !== bM)   return aM - bM;
+    if (aFav !== bFav) return aFav - bFav;
+    return 0;
   });
 
   document.getElementById('statBar').innerHTML =
@@ -444,12 +462,15 @@ function renderList() {
 
   wrap.innerHTML = list.map(ex => {
     const isMine = myLibIds.has(ex.id);
+    const isFav  = favIds.has(ex.id);
     const diffMap = { '초급': 'beginner', '중급': 'intermediate', '고급': 'advanced' };
     const diffClass = ex.difficulty
       ? 'diff-' + (diffMap[ex.difficulty] || ex.difficulty.toLowerCase())
       : '';
     return `
       <div class="ex-card ${isMine ? 'active-card' : ''}">
+        ${isMine ? `<button class="btn-fav ${isFav ? 'active' : ''}"
+                onclick="toggleFavorite(${ex.id}, ${isFav})" title="즐겨찾기">⭐</button>` : ''}
         <div class="ex-info">
           <div class="ex-name">${ex.name_ko || ex.name_en}</div>
           <div class="ex-tags">
@@ -498,6 +519,25 @@ async function toggleUse(refId, isMine) {
     showToast('✓ 내 수업 목록에 추가됨');
   }
   document.getElementById('myCount').textContent = `내 목록 ${myLibIds.size}`;
+  renderList();
+}
+
+// ─── 즐겨찾기 토글 ───
+async function toggleFavorite(refId, isFav) {
+  const newVal = !isFav;
+  const { error } = await db
+    .from('exercises_lib')
+    .update({ is_favorite: newVal })
+    .eq('trainer_id', trainer.id)
+    .eq('ref_id', refId);
+  if (error) { showToast('오류: ' + error.message); return; }
+  if (newVal) {
+    favIds.add(refId);
+    showToast('⭐ 즐겨찾기에 추가됨');
+  } else {
+    favIds.delete(refId);
+    showToast('즐겨찾기 해제됨');
+  }
   renderList();
 }
 
