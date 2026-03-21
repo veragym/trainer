@@ -1,0 +1,14 @@
+[
+  {
+    "date": "2026-03-21",
+    "tables": {
+      "trainers": "ERROR: 403 Client Error: Forbidden for url: https://inioqgwyddhpaedcmpuq.supabase.co/rest/v1/trainers?select=*&offset=0&limit=1000",
+      "members": "ERROR: 403 Client Error: Forbidden for url: https://inioqgwyddhpaedcmpuq.supabase.co/rest/v1/members?select=*&offset=0&limit=1000",
+      "exercises_lib": "ERROR: 403 Client Error: Forbidden for url: https://inioqgwyddhpaedcmpuq.supabase.co/rest/v1/exercises_lib?select=*&offset=0&limit=1000",
+      "exercise_refs": "ERROR: 403 Client Error: Forbidden for url: https://inioqgwyddhpaedcmpuq.supabase.co/rest/v1/exercise_refs?select=*&offset=0&limit=1000",
+      "pt_sessions": "ERROR: 403 Client Error: Forbidden for url: https://inioqgwyddhpaedcmpuq.supabase.co/rest/v1/pt_sessions?select=*&offset=0&limit=1000",
+      "session_exs": "ERROR: 403 Client Error: Forbidden for url: https://inioqgwyddhpaedcmpuq.supabase.co/rest/v1/session_exs?select=*&offset=0&limit=1000"
+    },
+    "status": "partial"
+  }
+]
