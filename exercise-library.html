@@ -126,19 +126,19 @@
     background: #2a2a2a; border-color: #444;
     color: #888;
   }
-  .btn-use.using:hover { border-color: #f87171; color: #f87171; background: #2a1515; }
+  .btn-use.using:hover { background: #2a2a2a; border-color: #444; color: #888; }
 
   /* 즐겨찾기 버튼 */
   .btn-fav {
     background: none; border: none;
     font-size: 22px; cursor: pointer;
-    padding: 4px 6px; flex-shrink: 0;
-    transition: transform 0.15s;
-    opacity: 0.35;
+    padding: 4px 4px; flex-shrink: 0;
+    transition: transform 0.15s, color 0.15s;
+    color: #3a3a3a;
     line-height: 1;
   }
-  .btn-fav.active { opacity: 1; }
-  .btn-fav:active { transform: scale(1.35); }
+  .btn-fav.active { color: #f5c518; }
+  .btn-fav:active { transform: scale(1.3); }
 
   /* 로딩 / 빈 상태 */
   .empty {
@@ -469,8 +469,6 @@ function renderList() {
       : '';
     return `
       <div class="ex-card ${isMine ? 'active-card' : ''}">
-        ${isMine ? `<button class="btn-fav ${isFav ? 'active' : ''}"
-                onclick="toggleFavorite(${ex.id}, ${isFav})" title="즐겨찾기">⭐</button>` : ''}
         <div class="ex-info">
           <div class="ex-name">${ex.name_ko || ex.name_en}</div>
           <div class="ex-tags">
@@ -479,9 +477,11 @@ function renderList() {
             ${ex.difficulty ? `<span class="tag ${diffClass}">${ex.difficulty}</span>` : ''}
           </div>
         </div>
+        ${isMine ? `<button class="btn-fav ${isFav ? 'active' : ''}"
+                onclick="toggleFavorite(${ex.id}, ${isFav})" title="즐겨찾기">${isFav ? '★' : '☆'}</button>` : ''}
         <button class="btn-use ${isMine ? 'using' : ''}"
                 onclick="toggleUse(${ex.id}, ${isMine})">
-          ${isMine ? '사용 중 ✓' : '＋ 사용'}
+          ${isMine ? '사용 중' : '＋ 사용'}
         </button>
       </div>
     `;
