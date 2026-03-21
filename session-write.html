@@ -491,9 +491,8 @@
   </div>
 </div>
 
-<!-- 숨김 파일 인풋 -->
-<input type="file" id="exPhotoCamera"  accept="image/*" capture="environment" style="display:none" onchange="onExPhotoSelected(this)">
-<input type="file" id="exPhotoGallery" accept="image/*"                        style="display:none" onchange="onExPhotoSelected(this)">
+<!-- 숨김 파일 인풋 (단일 — capture 속성을 선택 시점에 동적 설정) -->
+<input type="file" id="exPhotoInput" accept="image/*" style="display:none" onchange="onExPhotoSelected(this)">
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
@@ -939,10 +938,17 @@ function closePhotoSheet() {
 }
 function pickPhoto(type) {
   closePhotoSheet();
-  // iOS 안정성을 위해 짧은 딜레이 후 파일 선택창 열기
+  // 딜레이 후 파일 선택창 열기 (iOS/Android 안정성)
   setTimeout(() => {
-    if (type === 'camera') document.getElementById('exPhotoCamera').click();
-    else                    document.getElementById('exPhotoGallery').click();
+    const input = document.getElementById('exPhotoInput');
+    if (type === 'camera') {
+      // 카메라 앱 직접 열기 — capture 속성 동적 추가
+      input.setAttribute('capture', 'environment');
+    } else {
+      // 갤러리/사진앱 전체 선택 — capture 제거해야 Android 전체 앱 목록 표시
+      input.removeAttribute('capture');
+    }
+    input.click();
   }, 150);
 }
 
