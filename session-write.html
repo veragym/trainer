@@ -215,6 +215,31 @@
   }
   .btn-new-ex:hover { background: #0f3a22; border-color: #4ade80; }
 
+  /* ─── 필터 행 ─── */
+  .filter-row {
+    display: flex; gap: 8px; margin-top: 10px;
+  }
+  .filter-row select {
+    flex: 1; background: #111; border: 1.5px solid #2a2a2a;
+    border-radius: 8px; padding: 8px 10px;
+    font-size: 12px; color: #aaa; outline: none;
+    font-family: inherit; cursor: pointer;
+    transition: border-color 0.2s;
+    -webkit-appearance: none; appearance: none;
+  }
+  .filter-row select:focus { border-color: #4ade80; }
+  .filter-row select option { background: #1a1a1a; }
+
+  /* ─── 즐겨찾기 버튼 ─── */
+  .btn-star {
+    background: none; border: none; cursor: pointer;
+    font-size: 20px; color: #444; flex-shrink: 0;
+    padding: 4px 6px; transition: color 0.15s, transform 0.15s;
+    line-height: 1;
+  }
+  .btn-star:hover  { color: #facc15; transform: scale(1.2); }
+  .btn-star.active { color: #facc15; }
+
   /* 빈 검색 결과 */
   .search-empty { text-align: center; padding: 32px 20px; color: #444; font-size: 14px; }
 
@@ -319,7 +344,16 @@
         <span class="search-icon">🔍</span>
         <input type="text" class="search-input" id="searchInput"
                placeholder="운동 이름 검색..." oninput="onSearch(this.value)" autocomplete="off">
-        <button class="btn-x" onclick="document.getElementById('searchInput').value='';onSearch('')">✕</button>
+        <button class="btn-x" onclick="document.getElementById('searchInput').value='';applyFilters()">✕</button>
+      </div>
+      <!-- 부위 / 기구 필터 -->
+      <div class="filter-row">
+        <select id="filterBody" onchange="applyFilters()">
+          <option value="">전체 부위</option>
+        </select>
+        <select id="filterCat" onchange="applyFilters()">
+          <option value="">전체 기구</option>
+        </select>
       </div>
     </div>
 
@@ -402,6 +436,8 @@ let myLibrary  = [];        // 내 운동 라이브러리 캐시
 let newPhoto1  = null;      // 새 운동 사진 파일 1
 let newPhoto2  = null;      // 새 운동 사진 파일 2
 let searchTm   = null;
+let filterBody = '';        // 부위 필터
+let filterCat  = '';        // 기구 필터
 
 // ─── 초기화 ───
 async function init() {
@@ -452,14 +488,15 @@ async function init() {
   loadMyLibrary();
 }
 
-// ─── 내 운동 라이브러리 로드 (전체, use_count 순) ───
+// ─── 내 운동 라이브러리 로드 (즐겨찾기 먼저 → use_count 내림차순) ───
 async function loadMyLibrary() {
   const { data } = await db
     .from('exercises_lib')
-    .select('id, name, body_part, category, image_url_1, image_url_2, use_count')
+    .select('id, name, body_part, category, image_url_1, image_url_2, use_count, is_favorite')
     .eq('trainer_id', trainer.id)
-    .order('use_count', { ascending: false })
-    .limit(500);
+    .order('is_favorite', { ascending: false })  // ★ 먼저
+    .order('use_count',   { ascending: false })  // 그다음 사용빈도 순
+    .limit(2000);
   myLibrary = data || [];
 }
 
@@ -576,38 +613,68 @@ async function saveSession() {
 function openSearch() {
   document.getElementById('searchModal').classList.add('open');
   setTimeout(() => document.getElementById('searchInput').focus(), 200);
+  populateFilters();
   renderSearchResults('');
 }
 function closeSearch() {
   document.getElementById('searchModal').classList.remove('open');
   document.getElementById('searchInput').value = '';
+  filterBody = '';
+  filterCat  = '';
 }
 function onSearch(q) {
   clearTimeout(searchTm);
   searchTm = setTimeout(() => renderSearchResults(q), 150);
 }
 
+// ─── 필터 드롭다운 항목 채우기 ───
+function populateFilters() {
+  // 부위 목록 (중복 제거, 정렬)
+  const bodyParts = [...new Set(myLibrary.map(e => e.body_part).filter(Boolean))].sort();
+  const bodyEl = document.getElementById('filterBody');
+  bodyEl.innerHTML = '<option value="">전체 부위</option>' +
+    bodyParts.map(b => `<option value="${b}">${b}</option>`).join('');
+  bodyEl.value = filterBody;
+
+  // 기구 목록
+  const cats = [...new Set(myLibrary.map(e => e.category).filter(Boolean))].sort();
+  const catEl = document.getElementById('filterCat');
+  catEl.innerHTML = '<option value="">전체 기구</option>' +
+    cats.map(c => `<option value="${c}">${c}</option>`).join('');
+  catEl.value = filterCat;
+}
+
+// ─── 필터 적용 ───
+function applyFilters() {
+  filterBody = document.getElementById('filterBody')?.value || '';
+  filterCat  = document.getElementById('filterCat')?.value  || '';
+  const q = document.getElementById('searchInput')?.value || '';
+  renderSearchResults(q);
+}
+
 function renderSearchResults(q) {
   const wrap = document.getElementById('searchResults');
 
-  // 라이브러리 로딩 중
-  if (!myLibrary.length && !q) {
+  if (!myLibrary.length) {
     wrap.innerHTML = `<div class="search-empty">아직 만든 운동이 없어요.<br>위 버튼으로 첫 운동을 만들어보세요 🏋️</div>`;
     return;
   }
 
+  // 필터 적용 (myLibrary는 이미 ★ 먼저 → use_count 순 정렬됨)
   let list = myLibrary;
+  if (filterBody) list = list.filter(e => e.body_part === filterBody);
+  if (filterCat)  list = list.filter(e => e.category  === filterCat);
   if (q.trim()) {
     const kw = q.trim().toLowerCase();
-    list = myLibrary.filter(e => e.name.toLowerCase().includes(kw));
+    list = list.filter(e => e.name.toLowerCase().includes(kw));
   }
 
   if (!list.length) {
-    wrap.innerHTML = `<div class="search-empty">"${q}" 운동이 없어요.<br>새 운동 만들기로 추가해보세요</div>`;
+    wrap.innerHTML = `<div class="search-empty">해당 조건의 운동이 없어요.<br>필터를 바꾸거나 새 운동을 만들어보세요</div>`;
     return;
   }
 
-  wrap.innerHTML = list.slice(0, 60).map(ex => `
+  wrap.innerHTML = list.slice(0, 100).map(ex => `
     <div class="result-item" onclick="selectEx(${ex.id})">
       <div class="result-photos">
         ${ex.image_url_1
@@ -621,9 +688,38 @@ function renderSearchResults(q) {
         <div class="result-name">${ex.name}</div>
         <div class="result-meta">${[ex.body_part, ex.category].filter(Boolean).join(' · ')}</div>
       </div>
-      ${ex.use_count > 0 ? `<div class="result-use">${ex.use_count}회</div>` : ''}
+      ${ex.use_count > 0 ? `<span class="result-use">${ex.use_count}회</span>` : ''}
+      <!-- ☆/★ 즐겨찾기 버튼 (운동 선택과 분리) -->
+      <button class="btn-star ${ex.is_favorite ? 'active' : ''}"
+              onclick="event.stopPropagation();toggleFavorite(${ex.id})">
+        ${ex.is_favorite ? '★' : '☆'}
+      </button>
     </div>
   `).join('');
+}
+
+// ─── 즐겨찾기 토글 ───
+async function toggleFavorite(libId) {
+  const ex = myLibrary.find(e => e.id === libId);
+  if (!ex) return;
+  const newVal = !ex.is_favorite;
+
+  const { error } = await db
+    .from('exercises_lib')
+    .update({ is_favorite: newVal })
+    .eq('id', libId);
+
+  if (error) { showToast('오류: ' + error.message); return; }
+
+  // 캐시 업데이트 후 재정렬 (★ 먼저 → use_count 순)
+  ex.is_favorite = newVal;
+  myLibrary.sort((a, b) => {
+    if (b.is_favorite !== a.is_favorite) return b.is_favorite - a.is_favorite;
+    return b.use_count - a.use_count;
+  });
+
+  showToast(newVal ? '★ 즐겨찾기 등록' : '☆ 즐겨찾기 해제');
+  applyFilters(); // 목록 재렌더
 }
 
 function selectEx(libId) {
