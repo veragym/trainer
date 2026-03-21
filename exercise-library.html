@@ -237,20 +237,18 @@
   <div class="filter-row">
     <select id="equipFilter" onchange="renderList()">
       <option value="">전체 기구</option>
-      <option>Barbell</option>
-      <option>Bodyweight</option>
-      <option>Cable</option>
-      <option>Dumbbell</option>
-      <option>EZ Bar</option>
-      <option>Exercise Ball</option>
-      <option>Machine</option>
-      <option>Other</option>
+      <option>바벨</option>
+      <option>맨몸</option>
+      <option>케이블</option>
+      <option>덤벨</option>
+      <option>머신</option>
+      <option>기타</option>
     </select>
     <select id="diffFilter" onchange="renderList()">
       <option value="">전체 난이도</option>
-      <option>Beginner</option>
-      <option>Intermediate</option>
-      <option>Advanced</option>
+      <option>초급</option>
+      <option>중급</option>
+      <option>고급</option>
     </select>
   </div>
 </div>
@@ -296,11 +294,10 @@
         <label>운동 부위</label>
         <select id="newBody">
           <option value="">선택</option>
-          <option>Abs</option><option>Biceps</option><option>Calves</option>
-          <option>Chest</option><option>Forearms</option><option>Glutes</option>
-          <option>Hamstrings</option><option>Lats</option><option>Lower Back</option>
-          <option>Obliques</option><option>Quads</option><option>Shoulders</option>
-          <option>Traps</option><option>Triceps</option><option>Upper Back</option>
+          <option>가슴</option><option>등</option><option>어깨</option>
+          <option>이두</option><option>삼두</option><option>복부</option>
+          <option>대퇴사두</option><option>햄스트링</option><option>둔근</option>
+          <option>종아리</option><option>내전근</option><option>전완</option><option>허리</option>
         </select>
       </div>
 
@@ -308,8 +305,8 @@
         <label>기구</label>
         <select id="newEquip">
           <option value="">선택</option>
-          <option>Barbell</option><option>Bodyweight</option><option>Cable</option>
-          <option>Dumbbell</option><option>EZ Bar</option><option>Machine</option><option>Other</option>
+          <option>바벨</option><option>맨몸</option><option>케이블</option>
+          <option>덤벨</option><option>머신</option><option>기타</option>
         </select>
       </div>
 
@@ -317,7 +314,7 @@
         <label>난이도</label>
         <select id="newDiff">
           <option value="">선택</option>
-          <option>Beginner</option><option>Intermediate</option><option>Advanced</option>
+          <option>초급</option><option>중급</option><option>고급</option>
         </select>
       </div>
     </div>
@@ -358,7 +355,7 @@ async function loadAllExercises() {
     .from('exercise_refs')
     .select('id, name_en, name_ko, body_part, equipment, difficulty, primary_muscle, secondary_muscles')
     .order('body_part', { ascending: true })
-    .order('name_en',   { ascending: true })
+    .order('name_ko',   { ascending: true })
     .limit(2000);
   allExs = data || [];
 }
@@ -447,13 +444,14 @@ function renderList() {
 
   wrap.innerHTML = list.map(ex => {
     const isMine = myLibIds.has(ex.id);
+    const diffMap = { '초급': 'beginner', '중급': 'intermediate', '고급': 'advanced' };
     const diffClass = ex.difficulty
-      ? 'diff-' + ex.difficulty.toLowerCase()
+      ? 'diff-' + (diffMap[ex.difficulty] || ex.difficulty.toLowerCase())
       : '';
     return `
       <div class="ex-card ${isMine ? 'active-card' : ''}">
         <div class="ex-info">
-          <div class="ex-name">${ex.name_en || ex.name_ko}</div>
+          <div class="ex-name">${ex.name_ko || ex.name_en}</div>
           <div class="ex-tags">
             ${ex.body_part  ? `<span class="tag body">${ex.body_part}</span>` : ''}
             ${ex.equipment  ? `<span class="tag equip">${ex.equipment}</span>` : ''}
@@ -491,7 +489,7 @@ async function toggleUse(refId, isMine) {
       .insert({
         trainer_id: trainer.id,
         ref_id:     refId,
-        name:       ref.name_en || ref.name_ko,
+        name:       ref.name_ko || ref.name_en,
         body_part:  ref.body_part  || null,
         category:   ref.equipment  || null,
       });
@@ -540,7 +538,7 @@ function onNewNameInput(val) {
 
     list.innerHTML = hits.map(e => `
       <div class="dup-item" onclick="quickAdd(${e.id})">
-        <span>${e.name_en || e.name_ko}</span>
+        <span>${e.name_ko || e.name_en}</span>
         <span class="dup-item-tag">${[e.body_part, e.equipment].filter(Boolean).join(' · ')}</span>
       </div>
     `).join('');
