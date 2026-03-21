@@ -73,7 +73,61 @@
     background: #222; border: 1px dashed #333;
     display: flex; align-items: center; justify-content: center;
     font-size: 14px; color: #444;
+    cursor: pointer; transition: border-color 0.15s, background 0.15s;
   }
+  .ex-photo-empty:hover { border-color: #4ade80; background: #1a2a1a; color: #4ade80; }
+  .ex-photo-wrap {
+    position: relative; width: 40px; height: 40px; flex-shrink: 0; cursor: pointer;
+  }
+  .ex-photo-wrap img {
+    width: 40px; height: 40px; border-radius: 8px; object-fit: cover;
+    border: 1px solid #4ade8055; display: block;
+  }
+  .ex-photo-del {
+    position: absolute; top: -5px; right: -5px;
+    width: 16px; height: 16px; border-radius: 50%;
+    background: #ff4444; border: none; color: #fff;
+    font-size: 9px; cursor: pointer; display: flex;
+    align-items: center; justify-content: center; font-weight: 700;
+    z-index: 2;
+  }
+
+  /* ─── 사진 선택 바텀시트 ─── */
+  .photo-sheet-overlay {
+    display: none; position: fixed; inset: 0; z-index: 500;
+    background: rgba(0,0,0,0.6); align-items: flex-end;
+  }
+  .photo-sheet-overlay.open { display: flex; }
+  .photo-sheet {
+    background: #1e1e1e; border-radius: 20px 20px 0 0;
+    padding: 16px 16px 32px; width: 100%;
+    border-top: 1px solid #2a2a2a;
+    animation: slideUp 0.2s ease;
+  }
+  @keyframes slideUp {
+    from { transform: translateY(100%); }
+    to   { transform: translateY(0); }
+  }
+  .photo-sheet-title {
+    text-align: center; font-size: 13px; color: #555;
+    margin-bottom: 16px; font-weight: 600;
+  }
+  .photo-sheet-btn {
+    width: 100%; background: #2a2a2a; border: 1px solid #333;
+    color: #fff; border-radius: 12px; padding: 16px;
+    font-size: 15px; font-weight: 600; cursor: pointer;
+    margin-bottom: 10px; display: flex; align-items: center;
+    gap: 12px; font-family: inherit;
+  }
+  .photo-sheet-btn:hover { background: #333; border-color: #4ade80; }
+  .photo-sheet-btn .sheet-icon { font-size: 22px; }
+  .photo-sheet-cancel {
+    width: 100%; background: none; border: 1px solid #333;
+    color: #666; border-radius: 12px; padding: 14px;
+    font-size: 14px; cursor: pointer; font-family: inherit;
+    margin-top: 4px;
+  }
+  .photo-sheet-cancel:hover { color: #fff; border-color: #555; }
 
   .ex-name-wrap { flex: 1; min-width: 0; }
   .ex-name { font-size: 15px; font-weight: 700; }
@@ -423,6 +477,24 @@
   </div>
 </div>
 
+<!-- ─── 사진 선택 바텀시트 ─── -->
+<div id="photoSheetOverlay" class="photo-sheet-overlay" onclick="closePhotoSheet()">
+  <div class="photo-sheet" onclick="event.stopPropagation()">
+    <div class="photo-sheet-title">사진 추가</div>
+    <button class="photo-sheet-btn" onclick="pickPhoto('camera')">
+      <span class="sheet-icon">📷</span> 카메라로 찍기
+    </button>
+    <button class="photo-sheet-btn" onclick="pickPhoto('gallery')">
+      <span class="sheet-icon">🖼️</span> 갤러리에서 선택
+    </button>
+    <button class="photo-sheet-cancel" onclick="closePhotoSheet()">취소</button>
+  </div>
+</div>
+
+<!-- 숨김 파일 인풋 -->
+<input type="file" id="exPhotoCamera"  accept="image/*" capture="environment" style="display:none" onchange="onExPhotoSelected(this)">
+<input type="file" id="exPhotoGallery" accept="image/*"                        style="display:none" onchange="onExPhotoSelected(this)">
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
 <script>
@@ -513,11 +585,17 @@ function renderExercises() {
         <div class="ex-order">${i+1}</div>
         <div class="ex-photos">
           ${ex.img1
-            ? `<img class="ex-photo" src="${ex.img1}" alt="시작">`
-            : `<div class="ex-photo-empty">📷</div>`}
+            ? `<div class="ex-photo-wrap" onclick="openPhotoSheet(${i},1)">
+                 <img src="${ex.img1}" alt="사진1">
+                 <button class="ex-photo-del" onclick="removeExPhoto(${i},1,event)">✕</button>
+               </div>`
+            : `<div class="ex-photo-empty" onclick="openPhotoSheet(${i},1)" title="사진 추가">📷</div>`}
           ${ex.img2
-            ? `<img class="ex-photo" src="${ex.img2}" alt="끝">`
-            : `<div class="ex-photo-empty">📷</div>`}
+            ? `<div class="ex-photo-wrap" onclick="openPhotoSheet(${i},2)">
+                 <img src="${ex.img2}" alt="사진2">
+                 <button class="ex-photo-del" onclick="removeExPhoto(${i},2,event)">✕</button>
+               </div>`
+            : `<div class="ex-photo-empty" onclick="openPhotoSheet(${i},2)" title="사진 추가">📷</div>`}
         </div>
         <div class="ex-name-wrap">
           <div class="ex-name">${ex.name}</div>
@@ -846,6 +924,65 @@ async function uploadExPhoto(blob, name, num) {
 }
 
 function goBack() { history.back(); }
+
+// ─── 운동별 사진 촬영/업로드 ───
+let _photoExIdx = -1;
+let _photoSlot  = 1;
+
+function openPhotoSheet(exIdx, slot) {
+  _photoExIdx = exIdx;
+  _photoSlot  = slot;
+  document.getElementById('photoSheetOverlay').classList.add('open');
+}
+function closePhotoSheet() {
+  document.getElementById('photoSheetOverlay').classList.remove('open');
+}
+function pickPhoto(type) {
+  closePhotoSheet();
+  // iOS 안정성을 위해 짧은 딜레이 후 파일 선택창 열기
+  setTimeout(() => {
+    if (type === 'camera') document.getElementById('exPhotoCamera').click();
+    else                    document.getElementById('exPhotoGallery').click();
+  }, 150);
+}
+
+async function onExPhotoSelected(input) {
+  if (!input.files[0] || _photoExIdx < 0) return;
+  const file = input.files[0];
+  input.value = '';  // 동일 파일 재선택 허용
+
+  showToast('업로드 중...');
+  try {
+    const blob     = await compressImage(file);
+    const exName   = exercises[_photoExIdx].name;
+    const slug     = exName.replace(/\s+/g, '-').replace(/[^\w가-힣-]/g, '') || 'ex';
+    const fileName = `${trainer.id}/session-${session.id}/${slug}-s${_photoSlot}-${Date.now()}.webp`;
+
+    const { error: upErr } = await db.storage
+      .from('session-photos')
+      .upload(fileName, blob, { contentType: 'image/webp', upsert: false });
+    if (upErr) throw upErr;
+
+    const { data: { publicUrl } } = db.storage
+      .from('session-photos').getPublicUrl(fileName);
+
+    if (_photoSlot === 1) exercises[_photoExIdx].img1 = publicUrl;
+    else                   exercises[_photoExIdx].img2 = publicUrl;
+
+    renderExercises();
+    showToast('사진 추가됨 ✓');
+  } catch(e) {
+    showToast('업로드 실패: ' + e.message);
+  }
+}
+
+function removeExPhoto(exIdx, slot, e) {
+  e.stopPropagation();
+  if (slot === 1) exercises[exIdx].img1 = null;
+  else            exercises[exIdx].img2 = null;
+  renderExercises();
+  showToast('사진 삭제됨');
+}
 
 init();
 </script>
